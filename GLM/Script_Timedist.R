@@ -166,3 +166,26 @@ predict(object=time_distance_model,
 predict(object=time_distance_model,
         data.frame(distance=25),
         interval = "confidence", level=0.95)
+#New dataset with replications 
+# Function slice 
+new_time_distance <- time_distance %>%
+  slice(rep(1:n(), each=3))
+new_time_distance_model  <- lm(formula = time ~distance,
+                               data = new_time_distance)
+# The aim is to make new predictions for our model with more data
+summary(new_time_distance_model)
+
+confint(new_time_distance_model, level=0.95) # significance 5%
+
+ggplotly(
+  ggplot(new_time_distance, aes(x = distance, y = time)) +
+    geom_point(color = "deeppink3") +
+    geom_smooth(aes(color = "Fitted Values"),
+                method = "lm", formula = y ~ x,
+                level = 0.95) +
+    labs(x = "Distance",
+         y = "Time") +
+    scale_color_manual("Legend:",
+                       values = "grey50") +
+    theme_bw()
+)
