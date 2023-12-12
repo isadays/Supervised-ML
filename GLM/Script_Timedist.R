@@ -11,6 +11,8 @@ set_packages <-  c("plotly","tidyverse","ggrepel","fastDummies","knitr","kableEx
                    "equatiomatic")
 
 options(rgl.debug = TRUE)
+#remotes::install_github("datalorax/equatiomatic", force = TRUE) Force installation
+
 
 if(sum(as.numeric(!set_packages %in% installed.packages())) != 0){
   install_packages <- set_packages[!set_packages %in% installed.packages()]
@@ -63,7 +65,6 @@ anova(time_distance_model)
 summ(time_distance_model, confint = T, digits = 4, ci.width=.95)
 export_summs(time_distance_model,scale=F, digits=4)
 
-remotes::install_github("datalorax/equatiomatic", force = TRUE)
 
 
 extract_eq(time_distance_model, use_coefs=T) %>% 
@@ -74,6 +75,7 @@ extract_eq(time_distance_model, use_coefs=T) %>%
 
 time_distance$yhat <- time_distance_model$fitted.values
 time_distance$error <- time_distance_model$residuals
+
 time_distance %>%
   select(time,distance, yhat,error) %>%
   kable() %>%
@@ -96,3 +98,71 @@ ggplotly(
                        values = c("#55C667FF", "grey50", "deeppink2")) +
     theme_classic()
 )
+
+# Manual evaluation of R2
+R2 <- (sum((time_distance$yhat-mean(time_distance$time))^2))/
+  ((sum((time_distance$yhat-mean(time_distance$time))^2)) + (sum((time_distance$error)^2)))
+round(R2,digits = 4)
+#correlation coefficient
+cor(time_distance[1:2])
+
+# Now, we can test the auxiliary model
+aux_model <- lm(formula= yhat ~distance,
+                data = time_distance)
+summary(aux_model)
+
+
+my_plot <-
+  ggplot(time_distance, aes(x = distance, y = yhat)) +
+  geom_point(color = "deeppink3", size = 5) +
+  geom_smooth(aes(color = "Fitted Values"),
+              method = "lm", formula = y ~ x, se = F, size = 2) +
+  labs(x = "Distance",
+       y = "Time") +
+  scale_color_manual("Legend:",
+                     values = "grey50") +
+  theme_cowplot()
+my_plot
+
+
+# GLOBAL : F-statistic- F-distribution ( Fisher-Snedecor), pf -> critical p-value qf -> critical f 
+
+#LOCAL : P-value of t -> T -STUDENT SQRT(f) critical pt(p-value)
+
+#Significance level (5% -> critical P-value (H1)) and confidence level (95%) (H0)
+
+
+# Plot of confidence level 95%
+ggplotly(
+  ggplot(time_distance, aes(x = distance, y = time)) +
+    geom_point(color = "deeppink3") +
+    geom_smooth(aes(color = "Fitted Values"),
+                method = "lm", formula = y ~ x,
+                level = 0.95) +
+    labs(x = "Distance",
+         y = "Time") +
+    scale_color_manual("Legend:",
+                       values = "grey50") +
+    theme_bw()
+)
+
+#Confidence level  (Analysing betha and alpha parameters)
+confint(time_distance_model, leve=0.90) #significance level 10% OK BETHA
+
+#Confidence level  
+confint(time_distance_model, leve=0.95) #significance level 5% OK BETHA 
+
+#Confidence level  
+confint(time_distance_model, leve=0.98) #significance level 1% OK BETHA 
+
+#Confidence level  
+confint(time_distance_model, leve=0.999999) #significance level 0.001% -> contains 0
+
+
+#Predictions ->  time to cover the distance of 25 km 
+predict(object=time_distance_model,
+        data.frame(distance=25))
+#Predictions confidence level 
+predict(object=time_distance_model,
+        data.frame(distance=25),
+        interval = "confidence", level=0.95)
